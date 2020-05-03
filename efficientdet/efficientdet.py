@@ -1,12 +1,13 @@
 import torch
 import torch.nn as nn
 import math
-from models.efficientnet import EfficientNet
-from models.bifpn import BIFPN
-from .retinahead import RetinaHead
-from models.modules import RegressionModel, ClassificationModel, Anchors, ClipBoxes, BBoxTransform
+from .efficientnet import EfficientNet
+from .BiFPN import BIFPN
+from .rethead import RetinaHead
+from .modules import RegressionModel, ClassificationModel, Anchors, ClipBoxes, BBoxTransform
 from torchvision.ops import nms
 from .losses import FocalLoss
+
 MODEL_MAP = {
     'efficientdet-d0': 'efficientnet-b0',
     'efficientdet-d1': 'efficientnet-b1',
@@ -26,12 +27,12 @@ class EfficientDet(nn.Module):
                  D_bifpn=3,
                  W_bifpn=88,
                  D_class=3,
-                 is_training=True,
+                 is_training=False,
                  threshold=0.01,
                  iou_threshold=0.5):
         super(EfficientDet, self).__init__()
         self.backbone = EfficientNet.from_pretrained(MODEL_MAP[network])
-        self.is_training = is_training
+        self.inference = inference
         self.neck = BIFPN(in_channels=self.backbone.get_list_features()[-5:],
                           out_channels=W_bifpn,
                           stack=D_bifpn,
@@ -52,20 +53,17 @@ class EfficientDet(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
         self.freeze_bn()
-        self.criterion = FocalLoss()
 
     def forward(self, inputs):
-        if self.is_training:
-            inputs, annotations = inputs
-        else:
-            inputs = inputs
+        inputs = inputs
         x = self.extract_feat(inputs)
+
         outs = self.bbox_head(x)
         classification = torch.cat([out for out in outs[0]], dim=1)
         regression = torch.cat([out for out in outs[1]], dim=1)
         anchors = self.anchors(inputs)
-        if self.is_training:
-            return self.criterion(classification, regression, anchors, annotations)
+        if self.inference:
+            return [regression,classification,anchors]
         else:
             transformed_anchors = self.regressBoxes(anchors, regression)
             transformed_anchors = self.clipBoxes(transformed_anchors, inputs)

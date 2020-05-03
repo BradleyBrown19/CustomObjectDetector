@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 import torch.nn as nn
 
-from .module import ConvModule, bias_init_with_prob, normal_init
+from .modules import ConvModule, bias_init_with_prob, normal_init
 from six.moves import map, zip
 
 

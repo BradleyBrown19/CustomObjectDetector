@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from .module import ConvModule, xavier_init
+from .modules import ConvModule, xavier_init
 import torch
 
 
