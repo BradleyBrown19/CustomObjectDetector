@@ -23,11 +23,13 @@ MODEL_MAP = {
 class EfficientDet(nn.Module):
     def __init__(self,
                  num_classes,
+                 ratios,
+                 scales,
                  network='efficientdet-d0',
                  D_bifpn=3,
                  W_bifpn=88,
                  D_class=3,
-                 is_training=False,
+                 inference=False,
                  threshold=0.01,
                  iou_threshold=0.5):
         super(EfficientDet, self).__init__()
@@ -38,9 +40,11 @@ class EfficientDet(nn.Module):
                           stack=D_bifpn,
                           num_outs=5)
         self.bbox_head = RetinaHead(num_classes=num_classes,
-                                    in_channels=W_bifpn)
+                                    in_channels=W_bifpn,
+                                    anchor_ratios=ratios,
+                                    anchor_scales=scales)
 
-        self.anchors = Anchors()
+        self.anchors = Anchors(ratios=ratios, scales=scales)
         self.regressBoxes = BBoxTransform()
         self.clipBoxes = ClipBoxes()
         self.threshold = threshold
@@ -55,6 +59,11 @@ class EfficientDet(nn.Module):
         self.freeze_bn()
 
     def forward(self, inputs):
+        if self.inference:
+            inputs, annotations = inputs
+        else:
+            inputs = inputs
+
         inputs = inputs
         x = self.extract_feat(inputs)
 
@@ -62,7 +71,7 @@ class EfficientDet(nn.Module):
         classification = torch.cat([out for out in outs[0]], dim=1)
         regression = torch.cat([out for out in outs[1]], dim=1)
         anchors = self.anchors(inputs)
-        if self.inference:
+        if not self.inference:
             return [regression,classification,anchors]
         else:
             transformed_anchors = self.regressBoxes(anchors, regression)

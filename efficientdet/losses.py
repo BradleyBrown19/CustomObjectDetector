@@ -23,9 +23,10 @@ def calc_iou(a, b):
 
 class FocalLoss(nn.Module):
     def __init__(self, num_classes, weights=None, gpu=True):
+        super().__init__()
         if weights is None:
             weights = [1 for i in range(num_classes)]
-            
+
         self.weights = torch.tensor(weights)
 
         if gpu:
@@ -33,7 +34,7 @@ class FocalLoss(nn.Module):
 
     def forward(self, out, annotations):
         regressions, classifications, anchors = out
-        import pdb; pdb.set_trace()
+
         alpha = 0.25
         gamma = 2.0
         batch_size = classifications.shape[0]
@@ -79,7 +80,7 @@ class FocalLoss(nn.Module):
 
             if torch.cuda.is_available():
                 targets = targets.cuda()
-
+            #import pdb; pdb.set_trace()
             targets[torch.lt(IoU_max, 0.4), :] = 0.1
 
             positive_indices = torch.ge(IoU_max, 0.5)
@@ -96,11 +97,11 @@ class FocalLoss(nn.Module):
             else:
                 alpha_factor = torch.ones(targets.shape) * alpha
 
-            alpha_factor = torch.where(torch.eq(targets, 1.), alpha_factor, 1. - alpha_factor)
-            focal_weight = torch.where(torch.eq(targets, 1.), 1. - classification, classification)
+            alpha_factor = torch.where(torch.eq(targets, 0.9), alpha_factor, 0.9 - alpha_factor)
+            focal_weight = torch.where(torch.eq(targets, 0.9), 0.9 - - classification, classification)
             focal_weight = alpha_factor * torch.pow(focal_weight, gamma)
 
-            bce = -(targets * torch.log(classification) * self.weights + (1.0 - targets) * torch.log(1.0 - classification))
+            bce = -(targets * torch.log(classification) * self.weights + (0.9 - targets) * torch.log(0.9 - classification))
 
             # cls_loss = focal_weight * torch.pow(bce, gamma)
             cls_loss = focal_weight * bce

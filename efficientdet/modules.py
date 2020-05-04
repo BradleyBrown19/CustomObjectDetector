@@ -68,7 +68,7 @@ class ClipBoxes(nn.Module):
 
 
 class RegressionModel(nn.Module):
-    def __init__(self, num_features_in, num_anchors=9, feature_size=256):
+    def __init__(self, num_features_in, num_anchors=15, feature_size=256):
         super(RegressionModel, self).__init__()
 
         self.conv1 = nn.Conv2d(
@@ -102,7 +102,7 @@ class RegressionModel(nn.Module):
 
 
 class ClassificationModel(nn.Module):
-    def __init__(self, num_features_in, num_anchors=9, num_classes=80, prior=0.01, feature_size=256):
+    def __init__(self, num_features_in, num_anchors=15, num_classes=80, prior=0.01, feature_size=256):
         super(ClassificationModel, self).__init__()
         self.num_classes = num_classes
         self.num_anchors = num_anchors
@@ -148,15 +148,24 @@ class Anchors(nn.Module):
 
         if pyramid_levels is None:
             self.pyramid_levels = [3, 4, 5, 6, 7]
+        else:
+            self.pyramid_levels = pyramid_levels
         if strides is None:
             self.strides = [2 ** x for x in self.pyramid_levels]
+        else:
+            self.strides = strides
         if sizes is None:
             self.sizes = [2 ** (x + 2) for x in self.pyramid_levels]
+        else:
+            self.sizes = sizes
         if ratios is None:
-            self.ratios = np.array([0.5, 1, 2])
+            self.ratios = np.array([0.262, 0.469, 1.0, 2.133, 3.818])
+        else:
+            self.ratios = ratios
         if scales is None:
-            self.scales = np.array(
-                [2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)])
+            self.scales = np.array([0.458, 0.779, 1.3])
+        else:
+            self.scales = scales
 
     def forward(self, image):
 
@@ -173,9 +182,11 @@ class Anchors(nn.Module):
                 base_size=self.sizes[idx], ratios=self.ratios, scales=self.scales)
             shifted_anchors = shift(
                 image_shapes[idx], self.strides[idx], anchors)
+
             all_anchors = np.append(all_anchors, shifted_anchors, axis=0)
 
         all_anchors = np.expand_dims(all_anchors, axis=0)
+
 
         return torch.from_numpy(all_anchors.astype(np.float32)).to(image.device)
 
@@ -185,14 +196,8 @@ def generate_anchors(base_size=16, ratios=None, scales=None):
     Generate anchor (reference) windows by enumerating aspect ratios X
     scales w.r.t. a reference window.
     """
-
-    if ratios is None:
-        ratios = np.array([0.5, 1, 2])
-
-    if scales is None:
-        scales = np.array([2 ** 0, 2 ** (1.0 / 3.0), 2 ** (2.0 / 3.0)])
-
     num_anchors = len(ratios) * len(scales)
+    #print("NUM ACH: {}".format(num_anchors))
 
     # initialize output anchors
     anchors = np.zeros((num_anchors, 4))

@@ -1,14 +1,42 @@
-# pytorch-retinanet
+# Custom Object Detector
 
-![img3](https://github.com/yhenon/pytorch-retinanet/blob/master/images/3.jpg)
-![img5](https://github.com/yhenon/pytorch-retinanet/blob/master/images/5.jpg)
+# One Example
 
-Pytorch  implementation of RetinaNet object detection as described in [Focal Loss for Dense Object Detection](https://arxiv.org/abs/1708.02002) by Tsung-Yi Lin, Priya Goyal, Ross Girshick, Kaiming He and Piotr Dollár.
+### Table of Contents
+- <a href='#recent-update'>Architecture</a>
+- <a href='#results'>Results</a>
+- <a href='#installation'>Installation</a>
+- <a href='#training'>Training</a>
+- <a href='#validation'>Validation</a>
+- <a href='#training-efficientdet'>Datasets</a>
+- <a href='#acknowledgements'>Acknowledgements</a>
 
-This implementation is primarily designed to be easy to read and simple to modify.
+## Architecture
+
+This repo implements a novel architecture for object detection. 
+
+The model builds off of the Efficientdet model:
+
+<img src= "./docs/arch.png"/>
+
+In addition to the feature mixing in the BiFPN layers, this architecture introduces an upsampling connection in 
+bounding box and classification heads in order to increase information flow from the features with lower receptive 
+field size to the larger features. This is useful for detection tasks where an object can be better identified by 
+the combination of multiple smaller objects. For example, for computer UI detection, when identifying lists as
+the composition of bullets.
+
+Another change is adding seperate conv layers in the bb/regression heads for each feature size. This is especially
+good for tasks where size is an identifying feature of objects. Traditionally, neural nets are meant to be size invariant
+because many datasets have objects at different perspectives and distances. However, in datasets such as medical imaging and 
+UI object detection, scale is an important feature for the network to be able to learn. It is also because of this that the data
+augmentation for this network does not crop or resize the image in a non uniform way.
+
+Other subtler improvements include label smoothing and weighted loss for unbalanced datasets.
 
 ## Results
-Currently, this repo achieves 33.5% mAP at 600px resolution with a Resnet-50 backbone. The published result is 34.0% mAP. The difference is likely due to the use of Adam optimizer instead of SGD with weight decay.
+
+
+
 
 ## Installation
 
@@ -23,11 +51,7 @@ apt-get install tk-dev python-tk
 3) Install the python packages:
 	
 ```
-pip install pandas
-pip install pycocotools
-pip install opencv-python
-pip install requests
-
+pip install -r requirements.txt
 ```
 
 ## Training
@@ -46,16 +70,25 @@ python train.py --dataset csv --csv_train <path/to/train_annots.csv>  --csv_clas
 
 Note that the --csv_val argument is optional, in which case no validation will be performed.
 
-## Pre-trained model
-
-A pre-trained model is available at: 
-- https://drive.google.com/open?id=1yLmjq3JtXi841yXWBxst0coAgR26MNBS (this is a pytorch state dict)
-
-The state dict model can be loaded using:
+Other flags include
 
 ```
-retinanet = model.resnet50(num_classes=dataset_train.num_classes(),)
-retinanet.load_state_dict(torch.load(PATH_TO_WEIGHTS))
+--wd int # weight decay
+--scales # scales for custom anchor config
+--ratios # ratios for custom anchor config
+--bs # batch size
+--num_epochs # number of epochs to train for
+```
+
+Example training script:
+```
+python3 train.py \
+--dataset csv \
+--csv_train ./annotations.csv \
+--csv_val ./val_annotations.csv \
+--csv_classes ./classes.csv 
+--ratios 0.262 0.469 1.0 2.133 3.818 \
+--scales 0.458 0.779 1.3
 ```
 
 ## Validation
@@ -93,10 +126,6 @@ This will visualize bounding boxes on the validation set. To visualise with a CS
 ```
 python visualize.py --dataset csv --csv_classes <path/to/train/class_list.csv>  --csv_val <path/to/val_annots.csv> --model <path/to/model.pt>
 ```
-
-## Model
-
-The retinanet model uses a resnet backbone. You can set the depth of the resnet model using the --depth argument. Depth must be one of 18, 34, 50, 101 or 152. Note that deeper models are more accurate but are slower and use more memory.
 
 ## CSV datasets
 The `CSVGenerator` provides an easy way to define your own datasets.
@@ -151,14 +180,9 @@ bird,2
 
 ## Acknowledgements
 
-- Significant amounts of code are borrowed from the [keras retinanet implementation](https://github.com/fizyr/keras-retinanet)
+- Retinanet implementation [retinanet implementation](https://github.com/fizyr/keras-retinanet)
+- Efficientdet implementation [efficientdet implementation](https://github.com/toandaominh1997/EfficientDet.Pytorch)
 - The NMS module used is from the [pytorch faster-rcnn implementation](https://github.com/ruotianluo/pytorch-faster-rcnn)
 
 ## Examples
 
-![img1](https://github.com/yhenon/pytorch-retinanet/blob/master/images/1.jpg)
-![img2](https://github.com/yhenon/pytorch-retinanet/blob/master/images/2.jpg)
-![img4](https://github.com/yhenon/pytorch-retinanet/blob/master/images/4.jpg)
-![img6](https://github.com/yhenon/pytorch-retinanet/blob/master/images/6.jpg)
-![img7](https://github.com/yhenon/pytorch-retinanet/blob/master/images/7.jpg)
-![img8](https://github.com/yhenon/pytorch-retinanet/blob/master/images/8.jpg)

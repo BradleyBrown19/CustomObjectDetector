@@ -49,6 +49,7 @@ class MBConvBlock(nn.Module):
         # Depthwise convolution phase
         k = self._block_args.kernel_size
         s = self._block_args.stride
+
         self._depthwise_conv = Conv2d(
             in_channels=oup, out_channels=oup, groups=oup,  # groups makes it depthwise
             kernel_size=k, stride=s, bias=False)
@@ -78,7 +79,6 @@ class MBConvBlock(nn.Module):
         :param drop_connect_rate: drop connect rate (float, between 0 and 1)
         :return: output of block
         """
-
         # Expansion and Depthwise Convolution
         x = inputs
         if self._block_args.expand_ratio != 1:
@@ -102,6 +102,7 @@ class MBConvBlock(nn.Module):
                 x = drop_connect(x, p=drop_connect_rate,
                                  training=self.training)
             x = x + inputs  # skip connection
+
         return x
 
     def set_swish(self, memory_efficient=True):

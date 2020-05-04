@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 from torchvision import transforms
 
-from efficientdet import efficientdet
+from efficientdet.efficientdet import EfficientDet
 from efficientdet.dataloader import CocoDataset, CSVDataset, collater, Resizer, AspectRatioBasedSampler, Augmenter, \
     Normalizer
 from torch.utils.data import DataLoader
@@ -45,7 +45,7 @@ import torch.backends.cudnn as cudnn
 
 from utils import EFFICIENTDET, get_state_dict
 from efficientdet import losses
-from efficientdet import callbacks
+from efficientdet.callbacks import CustomSaveModelCallback
 
 import fastai
 from fastai.basic_data import DataBunch, Dataset
@@ -76,13 +76,19 @@ def main(args=None):
     parser.add_argument('--wd', default=1e-4,
                     help='Weight decay')
     parser.add_argument('--num_epochs', default=1,
-                    help='Weight decay')
+                    help='Number of epochs to train for')
     parser.add_argument('--lr', default=1e-5,
-                    help='Weight decay')
+                    help='Learning rate')
     parser.add_argument('--weighted_loss', default=None, help="Weighted loss for classification")
 
     parser.add_argument('--network', default='efficientdet-d0', type=str,
                     help='efficientdet-[d0, d1, ..]')
+
+    parser.add_argument('--scales', nargs='+', default=[8, 16, 32], type=float,
+                    help='Scales for anchor box config')
+    parser.add_argument('--ratios', nargs='+', default=[0.5, 1.0, 2.0], type=float,
+                    help='Ratios for anchor box config')
+
 
     parser = parser.parse_args(args)
 
@@ -118,14 +124,13 @@ def main(args=None):
         raise ValueError('Dataset type not understood (must be csv or coco), exiting.')
 
     model = EfficientDet(num_classes=dataset_train.num_classes(),
-                         network=args.network,
-                         W_bifpn=EFFICIENTDET[args.network]['W_bifpn'],
-                         D_bifpn=EFFICIENTDET[args.network]['D_bifpn'],
-                         D_class=EFFICIENTDET[args.network]['D_class']
+                         network=parser.network,
+                         scales=parser.scales,
+                         ratios=parser.ratios,
+                         W_bifpn=EFFICIENTDET[parser.network]['W_bifpn'],
+                         D_bifpn=EFFICIENTDET[parser.network]['D_bifpn'],
+                         D_class=EFFICIENTDET[parser.network]['D_class']
                          )
-    
-    if(args.resume is not None):
-        model.load_state_dict(checkpoint['state_dict'])
 
     use_gpu = True
 
@@ -140,18 +145,19 @@ def main(args=None):
 
     model.inference = False
 
-    optimizer = optim.Adam(retinanet.parameters(), lr=1e-5)
-
     loss = losses.FocalLoss(num_classes=dataset_train.num_classes(), weights=parser.weighted_loss, gpu=torch.cuda.is_available())
 
-    learn = Learner(data, retinanet, loss_func=loss)
+    learn = Learner(data, model, loss_func=loss)
+
+    if(parser.resume is not None):
+        learn.load(parser.resume)
 
     callbacks = []
 
-    if args.save_on_improvement:
+    if parser.save_on_improvement:
         callbacks.append(CustomSaveModelCallback(learn))
 
-    learn.fit(parser.num_epochs, parser.lr, parser.weight_decay, callbacks=callbacks)
+    learn.fit(parser.num_epochs, parser.lr, wd=parser.wd, callbacks=callbacks)
 
     learn.save("final_model")
 

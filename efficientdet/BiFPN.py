@@ -95,7 +95,6 @@ class BIFPN(nn.Module):
 
     def forward(self, inputs):
         assert len(inputs) == len(self.in_channels)
-
         # build laterals
         laterals = [
             lateral_conv(inputs[i + self.start_level])
@@ -187,7 +186,7 @@ class BiFPNModule(nn.Module):
 
         for i in range(levels - 1, 0, -1):
             pathtd[i - 1] = (w1[0, i-1]*pathtd[i - 1] + w1[1, i-1]*F.interpolate(
-                pathtd[i], scale_factor=2, mode='nearest'))/(w1[0, i-1] + w1[1, i-1] + self.eps)
+                pathtd[i], size=pathtd[i-1].shape[2:], mode='nearest'))/(w1[0, i-1] + w1[1, i-1] + self.eps)
             pathtd[i - 1] = self.bifpn_convs[idx_bifpn](pathtd[i - 1])
             idx_bifpn = idx_bifpn + 1
         # build down-top
@@ -198,6 +197,6 @@ class BiFPNModule(nn.Module):
             idx_bifpn = idx_bifpn + 1
 
         pathtd[levels - 1] = (w1[0, levels-1] * pathtd[levels - 1] + w1[1, levels-1] * F.max_pool2d(
-            pathtd[levels - 2], kernel_size=2))/(w1[0, levels-1] + w1[1, levels-1] + self.eps)
+            pathtd[levels - 2], kernel_size=2, ceil_mode=True))/(w1[0, levels-1] + w1[1, levels-1] + self.eps)
         pathtd[levels - 1] = self.bifpn_convs[idx_bifpn](pathtd[levels - 1])
         return pathtd
