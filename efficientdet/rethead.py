@@ -69,9 +69,11 @@ class RetinaHead(nn.Module):
 
     def _init_layers(self):
         self.relu = nn.ReLU(inplace=True)
-        self.cls_convs = [nn.ModuleList() for i in range(self.num_feature_levels)]
-        self.reg_convs = [nn.ModuleList() for i in range(self.num_feature_levels)]
+        self.cls_convs = nn.ModuleList()
+        self.reg_convs = nn.ModuleList()
         for j in range(self.num_feature_levels):
+            self.cls_convs.append(nn.ModuleList())
+            self.reg_convs.append(nn.ModuleList())
             for i in range(self.stacked_convs):
                 chn = self.in_channels if i == 0 else self.feat_channels
                 self.cls_convs[j].append(
@@ -92,13 +94,17 @@ class RetinaHead(nn.Module):
                         padding=1,
                         conv_cfg=self.conv_cfg,
                         norm_cfg=self.norm_cfg))
-        self.retina_cls = [nn.Conv2d(
-            self.feat_channels,
-            self.num_anchors * self.cls_out_channels,
-            3,
-            padding=1) for i in range(self.num_feature_levels)]
-        self.retina_reg = [nn.Conv2d(
-            self.feat_channels, self.num_anchors * 4, 3, padding=1) for i in range(self.num_feature_levels)]
+        self.retina_cls = nn.ModuleList()
+        self.retina_reg = nn.ModuleList()
+        
+        for i in range(self.num_feature_levels):
+            self.retina_cls = self.retina_cls.append(nn.Conv2d(
+                self.feat_channels,
+                self.num_anchors * self.cls_out_channels,
+                3,
+                padding=1))
+            self.retina_reg = self.retina_reg.append(nn.Conv2d(
+                self.feat_channels, self.num_anchors * 4, 3, padding=1))
         self.output_act = nn.Sigmoid()
 
         self.saved_clsfeats = [i for i in range(self.num_feature_levels)]

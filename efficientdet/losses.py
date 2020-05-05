@@ -81,7 +81,7 @@ class FocalLoss(nn.Module):
             if torch.cuda.is_available():
                 targets = targets.cuda()
             #import pdb; pdb.set_trace()
-            targets[torch.lt(IoU_max, 0.4), :] = 0.1
+            targets[torch.lt(IoU_max, 0.4), :] = 0.
 
             positive_indices = torch.ge(IoU_max, 0.5)
 
@@ -89,19 +89,19 @@ class FocalLoss(nn.Module):
 
             assigned_annotations = bbox_annotation[IoU_argmax, :]
 
-            targets[positive_indices, :] = 0.1
-            targets[positive_indices, assigned_annotations[positive_indices, 4].long()] = 0.9
+            targets[positive_indices, :] = 0.
+            targets[positive_indices, assigned_annotations[positive_indices, 4].long()] = 1.
 
             if torch.cuda.is_available():
                 alpha_factor = torch.ones(targets.shape).cuda() * alpha
             else:
                 alpha_factor = torch.ones(targets.shape) * alpha
 
-            alpha_factor = torch.where(torch.eq(targets, 0.9), alpha_factor, 0.9 - alpha_factor)
-            focal_weight = torch.where(torch.eq(targets, 0.9), 0.9 - - classification, classification)
+            alpha_factor = torch.where(torch.eq(targets, 1.), alpha_factor, 1. - alpha_factor)
+            focal_weight = torch.where(torch.eq(targets, 1.), 1. - - classification, classification)
             focal_weight = alpha_factor * torch.pow(focal_weight, gamma)
 
-            bce = -(targets * torch.log(classification) * self.weights + (0.9 - targets) * torch.log(0.9 - classification))
+            bce = -(targets * torch.log(classification) * self.weights + (1. - targets) * torch.log(1. - classification))
 
             # cls_loss = focal_weight * torch.pow(bce, gamma)
             cls_loss = focal_weight * bce
