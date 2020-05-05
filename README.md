@@ -1,7 +1,5 @@
 # Custom Object Detector
 
-# One Example
-
 <img src="./configs/1.png">
 
 ### Table of Contents
