@@ -103,3 +103,5 @@ ENV/
 *.pt
 
 ./models/*
+
+./detector/dataset
