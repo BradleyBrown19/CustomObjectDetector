@@ -1,6 +1,6 @@
 # Custom Object Detector
 
-<img src="./configs/1.png">
+<img src="./images/1.png">
 
 ### Table of Contents
 - <a href='#recent-update'>Architecture</a>
@@ -17,7 +17,7 @@ This repo implements a novel architecture for object detection.
 
 The model builds off of the Efficientdet model:
 
-<img src= "./docs/arch.png"/>
+<img src= "./images/arch.png"/>
 
 In addition to the feature mixing in the BiFPN layers, this architecture introduces an upsampling connection in 
 bounding box and classification heads in order to increase information flow from the features with lower receptive 
